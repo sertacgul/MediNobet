@@ -1,16 +1,16 @@
 {
- "name": "MediNöbet",
- "short_name": "MediNöbet",
+ "name": "ShiftZen",
+ "short_name": "ShiftZen",
  "start_url": "./index.html",
  "display": "standalone",
  "background_color": "#f8fafc",
  "theme_color": "#dc2626",
  "orientation": "portrait",
- "description": "Sağlık çalışanları için akıllı nöbet yönetim sistemi.",
+ "description": "Akıllı vardiya ve nöbet yönetim sistem asistanı.",
  "icons": [
    {
-     "src": "icon.png",
-     "sizes": "192x192",
+     "src": "ShiftZen.png",
+     "sizes": "512x512",
      "type": "image/png"
    },
    {
@@ -19,4 +19,5 @@
      "type": "image/png"
    }
  ]
+
 }
