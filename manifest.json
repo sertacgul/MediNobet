@@ -9,7 +9,7 @@
  "description": "Akıllı vardiya ve nöbet yönetim sistem asistanı.",
  "icons": [
    {
-     "src": "ShiftZen.png",
+     "src": "icon.png",
      "sizes": "512x512",
      "type": "image/png"
    },
@@ -21,3 +21,4 @@
  ]
 
 }
+
