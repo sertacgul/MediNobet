@@ -3,26 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>MediNöbet - Pro</title>
-<!-- iOS PWA Ayarları -->
+<title>ShiftZen</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="MediNöbet">
+<meta name="apple-mobile-web-app-title" content="ShiftZen">
 <link rel="apple-touch-icon" href="icon.png">
-<!-- Kütüphaneler -->
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link href="https://fonts.googleapis.com/css2?family=Varela+Round&display=swap" rel="stylesheet">
-<!-- Excel Kütüphanesi -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <link rel="manifest" href="manifest.json">
 <style>
 
         body { 
 
-            font-family: 'Varela Round', sans-serif; 
+            font-family: 'Inter', sans-serif; 
 
-            background-color: #f8fafc; 
+            background-color: #f1f5f9; 
 
             -webkit-tap-highlight-color: transparent;
 
@@ -30,935 +28,481 @@
 
             padding-bottom: env(safe-area-inset-bottom);
 
+            height: 100vh;
+
+            display: flex;
+
+            flex-direction: column;
+
+            overflow: hidden;
+
         }
 
-        .glass-card { background: rgba(255, 255, 255, 0.98); border: 1px solid rgba(226, 232, 240, 0.8); }
+        :root { --primary: #2563eb; --bg-card: #ffffff; }
 
-        .tab-active { color: #dc2626; border-bottom: 3px solid #dc2626; }
+        .tab-active { color: var(--primary); border-top: 3px solid var(--primary); background: #eff6ff; }
 
-        .tab-inactive { color: #94a3b8; }
+        .tab-inactive { color: #94a3b8; border-top: 3px solid transparent; }
 
         .cal-day { 
 
-            min-height: 90px; display: flex; flex-direction: column; align-items: start; justify-content: start; 
+            display: flex; flex-direction: column; 
 
-            padding: 4px; cursor: pointer; border-radius: 8px; transition: all 0.2s; position: relative; 
+            background: white; border: 1px solid #e2e8f0; 
 
-            border: 1px solid #e2e8f0; background: white; overflow: hidden;
+            border-radius: 6px; overflow: hidden; position: relative;
+
+            cursor: pointer; transition: all 0.1s;
+
+            min-height: 80px; 
 
         }
 
-        .cal-day:active { transform: scale(0.98); border-color: #dc2626; }
+        @media (min-width: 768px) { .cal-day { min-height: 120px; } }
+
+        .cal-day:active { border-color: var(--primary); transform: scale(0.98); }
+
+        .cal-day.is-holiday { background-color: #fef2f2; border-color: #fecdd3; }
+
+        .shift-box {
+
+            flex: 1; border-top: 1px solid #f1f5f9; padding: 1px 2px;
+
+            display: flex; flex-direction: column; justify-content: start;
+
+            min-height: 0;
+
+        }
+
+        .shift-label { font-size: 7px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 1px; }
+
+        .name-tag {
+
+            font-size: 9px; line-height: 1.3; padding: 1px 4px; border-radius: 3px; 
+
+            background: #f8fafc; border: 1px solid #cbd5e1; color: #334155;
+
+            display: flex; justify-content: space-between; align-items: center;
+
+            margin-bottom: 1px; white-space: nowrap; overflow: hidden;
+
+        }
+
+        .name-tag button { margin-left: 2px; color: #ef4444; }
 
         .no-scrollbar::-webkit-scrollbar { display: none; }
 
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        /* Takvim içi Scrollbar */
 
-        .status-ok { background-color: #f0fdf4; border-color: #86efac; }
+        #calendarGrid::-webkit-scrollbar { width: 4px; }
 
-        .status-error { background-color: #fef2f2; border-color: #fca5a5; }
+        #calendarGrid::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
 
-        .status-neutral { background-color: #ffffff; border-color: #e2e8f0; }
+        .pref-day-cell { height: 70px; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; background: white; }
 
-        .pref-wanted { background-color: #22c55e !important; color: white !important; }
+        .pref-day-header { font-size: 10px; font-weight: bold; text-align: center; background: #f8fafc; color: #64748b; padding: 2px 0; border-bottom: 1px solid #e2e8f0; }
 
-        .pref-blocked { background-color: #ef4444 !important; color: white !important; }
+        .pref-shift { flex: 1; border-top: 1px solid #f1f5f9; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; transition: background 0.1s; }
 
-        .modal { transition: opacity 0.2s ease; }
+        .pref-shift:first-child { border-top: none; }
+
+        .pref-shift.wanted { background-color: #dcfce7; color: #166534; }
+
+        .pref-shift.blocked { background-color: #fee2e2; color: #991b1b; }
+
+        .modal { transition: opacity 0.2s ease, transform 0.2s ease; }
 
         body.modal-active { overflow: hidden; }
 
-        .premium-gradient { background: linear-gradient(135deg, #FFD700 0%, #FDB931 100%); color: #7a5c00; }
+        .magic-btn { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); box-shadow: 0 4px 10px rgba(124, 58, 237, 0.3); }
+
+        .premium-gradient { background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; }
+
+        .toggle-checkbox:checked { right: 0; border-color: #68D391; }
+
+        .toggle-checkbox:checked + .toggle-label { background-color: #68D391; }
 </style>
 </head>
 <body class="text-slate-700 h-screen flex flex-col overflow-hidden">
 <!-- Üst Bar -->
-<header class="bg-gradient-to-r from-red-600 to-red-800 text-white p-4 shadow-lg z-20">
-<div class="flex justify-between items-center max-w-3xl mx-auto">
+<header class="bg-white border-b border-slate-200 p-3 z-20 flex-none shadow-sm">
+<div class="flex justify-between items-center max-w-7xl mx-auto px-2">
 <div class="flex items-center gap-3">
-<img src="https://upload.wikimedia.org/wikipedia/commons/b/b4/Flag_of_Turkey.svg" alt="Türk Bayrağı" class="h-8 w-auto drop-shadow-md rounded-sm border border-white/20">
+<div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
+<i class="fa-solid fa-user-clock text-xl"></i>
+</div>
 <div>
-<h1 class="text-xl font-bold leading-tight tracking-tight">MediNöbet</h1>
-<p class="text-[10px] text-red-100 opacity-90 font-light tracking-wide">Generated by ATAOL AI Techs</p>
+<h1 class="text-lg font-bold leading-none text-slate-800 tracking-tight">ShiftZen</h1>
+<p class="text-[10px] text-slate-500 font-medium mt-0.5">Akıllı vardiya ve nöbet yönetim sistem asistanı - Generated with responsibility by ATAOL AI Techs</p>
 </div>
 </div>
-<button onclick="downloadFullReport()" class="bg-black/20 hover:bg-black/30 backdrop-blur-sm px-3 py-1.5 rounded-lg text-xs font-bold shadow transition flex items-center border border-white/20">
-<i class="fa-solid fa-share-from-square mr-1.5"></i> Raporu Paylaş
-</button>
+<span id="currentModeBadge" class="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-1 rounded-md border border-slate-200">24 Saat</span>
 </div>
 </header>
 <!-- Tab Menü -->
-<nav class="bg-white shadow-sm z-10 border-b border-slate-100">
-<div class="flex max-w-3xl mx-auto">
-<button onclick="switchTab('calendar')" id="tab-calendar" class="flex-1 py-3 text-center font-bold text-sm tab-active transition">
-<i class="fa-regular fa-calendar-days mb-1 block"></i> Takvim
+<nav class="bg-white shadow-sm z-10 border-b border-slate-100 shrink-0">
+<div class="flex w-full max-w-7xl mx-auto">
+<button onclick="switchTab('calendar')" id="tab-calendar" class="flex-1 py-3 flex flex-col items-center justify-center text-xs sm:text-sm font-bold tab-active transition">
+<i class="fa-regular fa-calendar-days text-lg mb-1"></i> Takvim
 </button>
-<button onclick="switchTab('doctors')" id="tab-doctors" class="flex-1 py-3 text-center font-bold text-sm tab-inactive transition">
-<i class="fa-solid fa-user-nurse mb-1 block"></i> Personel
+<button onclick="switchTab('doctors')" id="tab-doctors" class="flex-1 py-3 flex flex-col items-center justify-center text-xs sm:text-sm font-bold tab-inactive transition">
+<i class="fa-solid fa-users text-lg mb-1"></i> Ekip
 </button>
-<button onclick="switchTab('settings')" id="tab-settings" class="flex-1 py-3 text-center font-bold text-sm tab-inactive transition">
-<i class="fa-solid fa-sliders mb-1 block"></i> Ayarlar
+<button onclick="switchTab('stats')" id="tab-stats" class="flex-1 py-3 flex flex-col items-center justify-center text-xs sm:text-sm font-bold tab-inactive transition">
+<i class="fa-solid fa-chart-pie text-lg mb-1"></i> Analiz
+</button>
+<button onclick="switchTab('settings')" id="tab-settings" class="flex-1 py-3 flex flex-col items-center justify-center text-xs sm:text-sm font-bold tab-inactive transition">
+<i class="fa-solid fa-sliders text-lg mb-1"></i> Ayarlar
 </button>
 </div>
 </nav>
-<!-- Ana İçerik Alanı -->
-<main class="flex-1 overflow-y-auto p-4 max-w-3xl mx-auto w-full relative pb-24">
-<!-- 1. TAKVİM GÖRÜNÜMÜ -->
-<div id="view-calendar" class="space-y-4">
-<div class="flex justify-between items-center bg-white p-3 rounded-2xl shadow-sm border border-slate-100">
-<button onclick="changeMonth(-1)" class="p-2 text-red-600 hover:bg-red-50 rounded-full transition"><i class="fa-solid fa-chevron-left"></i></button>
-<h2 id="currentMonthLabel" class="text-lg font-bold text-slate-800">Ekim 2023</h2>
-<button onclick="changeMonth(1)" class="p-2 text-red-600 hover:bg-red-50 rounded-full transition"><i class="fa-solid fa-chevron-right"></i></button>
+<!-- Ana İçerik -->
+<main class="flex-1 overflow-hidden relative w-full max-w-7xl mx-auto">
+<div class="h-full w-full overflow-y-auto p-2 sm:p-4 pb-20 no-scrollbar" id="main-scroll">
+<!-- 1. TAKVİM -->
+<div id="view-calendar" class="flex flex-col gap-3 h-full">
+<div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-3 shrink-0">
+<div class="flex items-center gap-4 bg-slate-50 p-1.5 rounded-lg border border-slate-100">
+<button onclick="changeMonth(-1)" class="w-8 h-8 flex items-center justify-center bg-white rounded-md shadow-sm text-slate-600 hover:text-blue-600"><i class="fa-solid fa-chevron-left"></i></button>
+<h2 id="currentMonthLabel" class="text-sm font-bold text-slate-800 w-24 text-center">Ay</h2>
+<button onclick="changeMonth(1)" class="w-8 h-8 flex items-center justify-center bg-white rounded-md shadow-sm text-slate-600 hover:text-blue-600"><i class="fa-solid fa-chevron-right"></i></button>
 </div>
-<div class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100">
-<div class="grid grid-cols-7 gap-1 text-center text-xs font-bold text-slate-500 mb-2 border-b border-slate-100 pb-2">
-<div>Pzt</div><div>Sal</div><div>Çar</div><div>Per</div><div>Cum</div><div>Cmt</div><div class="text-red-500">Paz</div>
+<button onclick="autoDistribute()" class="w-full sm:w-auto px-4 py-2 rounded-lg text-white text-xs font-bold flex items-center justify-center gap-2 magic-btn active:scale-95 transition">
+<i class="fa-solid fa-wand-magic-sparkles"></i> Akıllı Dağıt
+</button>
 </div>
-<div id="calendarGrid" class="grid grid-cols-7 gap-1.5"></div>
+<div class="flex justify-center gap-4 text-[10px] text-slate-500 font-medium shrink-0">
+<div class="flex items-center"><span class="w-2 h-2 bg-red-100 border border-red-300 rounded mr-1.5"></span> Eksik</div>
+<div class="flex items-center"><span class="w-2 h-2 bg-green-100 border border-green-300 rounded mr-1.5"></span> Tamam</div>
+<div class="flex items-center"><span class="w-2 h-2 bg-white border border-red-300 rounded mr-1.5"></span> Tatil</div>
 </div>
-<div class="text-xs text-center text-slate-400 mt-2 flex justify-center gap-4">
-<div class="flex items-center"><span class="w-2.5 h-2.5 bg-red-100 border border-red-300 rounded-full mr-1.5"></span> Eksik/Hata</div>
-<div class="flex items-center"><span class="w-2.5 h-2.5 bg-green-100 border border-green-300 rounded-full mr-1.5"></span> Tamam</div>
+<div class="bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col flex-1 overflow-hidden">
+<div class="grid grid-cols-7 border-b border-slate-100 bg-slate-50/50">
+<div class="text-center py-2 text-[10px] font-bold text-slate-400">Pzt</div><div class="text-center py-2 text-[10px] font-bold text-slate-400">Sal</div><div class="text-center py-2 text-[10px] font-bold text-slate-400">Çar</div><div class="text-center py-2 text-[10px] font-bold text-slate-400">Per</div><div class="text-center py-2 text-[10px] font-bold text-slate-400">Cum</div><div class="text-center py-2 text-[10px] font-bold text-orange-500">Cmt</div><div class="text-center py-2 text-[10px] font-bold text-red-500">Paz</div>
+</div>
+<div id="calendarGrid" class="grid grid-cols-7 gap-px bg-slate-100 flex-1 overflow-y-auto no-scrollbar"></div>
 </div>
 </div>
-<!-- 2. PERSONEL YÖNETİMİ -->
-<div id="view-doctors" class="hidden space-y-4">
-<div class="glass-card p-5 rounded-2xl shadow-sm border-l-4 border-red-500">
-<h3 class="font-bold text-red-600 mb-3 flex items-center">
-<i class="fa-solid fa-user-plus mr-2"></i> Yeni Personel Ekle
+<!-- 2. EKİP (GÜNCELLENDİ) -->
+<div id="view-doctors" class="hidden space-y-4 max-w-2xl mx-auto">
+<div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200" id="doctorCard">
+<!-- Başlık Alanı -->
+<div class="flex justify-between items-center mb-4">
+<h3 class="font-bold text-slate-800 flex items-center">
+<div class="w-6 h-6 rounded bg-blue-100 text-blue-600 flex items-center justify-center mr-2 text-xs"><i class="fa-solid fa-user-plus"></i></div>
+<span id="docCardTitle">Yeni Personel Ekle</span>
 </h3>
-<input type="text" id="docNameInput" placeholder="Ad Soyad (Örn: Uzm.Dr. Feride GÜL)" class="w-full p-3 rounded-xl border border-slate-200 mb-4 focus:outline-none focus:ring-2 focus:ring-red-500 transition bg-slate-50">
-<p class="text-xs text-slate-500 mb-2 font-medium">Nöbet Tercihleri:</p>
-<div class="flex gap-2 text-[10px] mb-2">
-<span class="bg-green-100 text-green-700 px-2 py-1 rounded">1 Tık: İstiyor</span>
-<span class="bg-red-100 text-red-700 px-2 py-1 rounded">2 Tık: İstemiyor</span>
+<!-- Sıfırla / Yeni Ekle Butonu (Gizli başlar) -->
+<button onclick="resetDoctorForm()" id="btnResetDoc" class="hidden text-xs text-slate-400 hover:text-blue-600 flex items-center transition bg-slate-50 px-2 py-1 rounded border border-slate-100">
+<i class="fa-solid fa-plus mr-1"></i> Yeni Ekle
+</button>
 </div>
-<div class="bg-white p-3 rounded-xl border border-slate-200 mb-4">
-<div class="flex justify-between mb-2 px-1">
-<button onclick="changePrefMonth(-1)" class="text-xs px-2"><i class="fa-solid fa-chevron-left"></i></button>
-<span id="prefMonthLabel" class="text-xs font-bold text-slate-600">Ay</span>
-<button onclick="changePrefMonth(1)" class="text-xs px-2"><i class="fa-solid fa-chevron-right"></i></button>
+<input type="text" id="docNameInput" placeholder="Ad SOYAD (Örn. Uzm.Dr. Feride GÜL)" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm mb-4 focus:outline-none focus:border-blue-500 transition">
+<div class="bg-slate-50 p-3 rounded-xl border border-slate-200 mb-4">
+<div class="flex justify-between items-center mb-2 px-1">
+<span class="text-xs font-bold text-slate-500">Vardiya/Nöbet Tercihleri</span>
+<div class="flex gap-2">
+<button onclick="changePrefMonth(-1)" class="w-5 h-5 flex items-center justify-center bg-white rounded border text-xs"><i class="fa-solid fa-chevron-left"></i></button>
+<span id="prefMonthLabel" class="text-[10px] font-bold py-1">Ay</span>
+<button onclick="changePrefMonth(1)" class="w-5 h-5 flex items-center justify-center bg-white rounded border text-xs"><i class="fa-solid fa-chevron-right"></i></button>
+</div>
+</div>
+<!-- Gün İsimleri -->
+<div class="grid grid-cols-7 text-center mb-1">
+<span class="text-[9px] font-bold text-slate-400">Pzt</span><span class="text-[9px] font-bold text-slate-400">Sal</span><span class="text-[9px] font-bold text-slate-400">Çar</span><span class="text-[9px] font-bold text-slate-400">Per</span><span class="text-[9px] font-bold text-slate-400">Cum</span><span class="text-[9px] font-bold text-orange-400">Cmt</span><span class="text-[9px] font-bold text-red-400">Paz</span>
 </div>
 <div id="prefGrid" class="grid grid-cols-7 gap-1"></div>
+<p class="text-[10px] text-slate-400 mt-2 text-center">Müsaitlik için kutucuklara tıklayın.</p>
 </div>
-<button onclick="saveDoctor()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-red-200 transition active:scale-95">
-
-                    Kaydet
+<button onclick="saveDoctor()" id="btnSaveDoc" class="w-full bg-slate-900 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-slate-800 transition text-sm">Kaydet</button>
+</div>
+<div class="space-y-2">
+<h3 class="font-bold text-slate-700 text-sm ml-1">Ekip Listesi</h3>
+<p class="text-[10px] text-slate-400 ml-1 mb-1">Düzenlemek için isme tıklayın.</p>
+<ul id="doctorsList" class="grid grid-cols-1 gap-2"></ul>
+</div>
+</div>
+<!-- 3. ANALİZ -->
+<div id="view-stats" class="hidden space-y-4 max-w-4xl mx-auto">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+<h4 class="text-xs font-bold text-slate-400 uppercase mb-3 tracking-wider">Genel Yük</h4>
+<div class="h-48"><canvas id="totalChart"></canvas></div>
+</div>
+<div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+<h4 class="text-xs font-bold text-slate-400 uppercase mb-3 tracking-wider">Tatil Yükü</h4>
+<div class="h-48"><canvas id="weekendChart"></canvas></div>
+</div>
+</div>
+<h3 class="font-bold text-slate-700 text-sm mt-4 ml-1">Bölge Bazlı Analiz</h3>
+<div id="slotChartsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+<div class="h-px bg-slate-200 my-4"></div>
+<button onclick="downloadFullReport()" class="w-full premium-gradient text-white font-bold py-4 rounded-xl shadow-lg shadow-green-100 hover:shadow-xl transition transform active:scale-95 flex items-center justify-center gap-3">
+<div class="bg-white/20 w-8 h-8 rounded-full flex items-center justify-center"><i class="fa-solid fa-file-excel"></i></div>
+<div class="text-left">
+<div class="text-sm">Excel Raporu İndir</div>
+<div class="text-[10px] opacity-80 font-normal">Tam Çizelge + İstatistikler</div>
+</div>
 </button>
 </div>
-<div class="flex justify-between items-end">
-<h3 class="font-bold text-slate-700 ml-1">Kayıtlı Personel</h3>
-<span id="docCountBadge" class="text-[10px] bg-slate-200 px-2 py-1 rounded-full text-slate-600">Sınırsız</span>
+<!-- 4. AYARLAR -->
+<div id="view-settings" class="hidden space-y-6 max-w-2xl mx-auto">
+<div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+<h3 class="font-bold text-slate-800 mb-2 flex items-center text-sm"><div class="w-6 h-6 rounded bg-green-100 text-green-600 flex items-center justify-center mr-2 text-xs"><i class="fa-solid fa-scale-balanced"></i></div>Adalet Terazisi</h3>
+<p class="text-[10px] text-slate-500 mb-2">Kümülatif hesaplama başlangıcı:</p>
+<div class="flex gap-2 items-center"><label class="text-xs font-bold text-slate-600">Tarih:</label><input type="date" id="cumulativeStartDate" class="border rounded p-2 text-xs bg-slate-50 flex-1" onchange="saveCumulativeDate()"></div>
 </div>
-<ul id="doctorsList" class="space-y-2"></ul>
+<div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+<h3 class="font-bold text-slate-800 mb-3 flex items-center text-sm"><div class="w-6 h-6 rounded bg-indigo-100 text-indigo-600 flex items-center justify-center mr-2 text-xs"><i class="fa-solid fa-clock"></i></div>Çalışma Düzeni</h3>
+<div class="grid grid-cols-3 gap-2">
+<button onclick="changeShiftMode(1)" id="mode-1" class="border p-3 rounded-xl text-center hover:bg-slate-50 transition flex flex-col items-center gap-1"><span class="font-bold text-xs">24 Saat</span></button>
+<button onclick="changeShiftMode(2)" id="mode-2" class="border p-3 rounded-xl text-center hover:bg-slate-50 transition flex flex-col items-center gap-1"><span class="font-bold text-xs">12 Saat</span></button>
+<button onclick="changeShiftMode(3)" id="mode-3" class="border p-3 rounded-xl text-center hover:bg-slate-50 transition flex flex-col items-center gap-1"><span class="font-bold text-xs">8 Saat</span></button>
 </div>
-<!-- 3. AYARLAR -->
-<div id="view-settings" class="hidden space-y-4">
-<div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
-<h3 class="font-bold text-slate-700 mb-2 flex items-center">
-<i class="fa-solid fa-list-check mr-2 text-red-500"></i> Nöbet Sahaları
-</h3>
-<p class="text-xs text-slate-500 mb-4">Nöbet yerlerini ve kişi sayılarını buradan yönetebilirsiniz.</p>
+</div>
+<div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+<div class="flex justify-between items-center mb-4"><h3 class="font-bold text-slate-800 text-sm flex items-center"><div class="w-6 h-6 rounded bg-blue-100 text-blue-600 flex items-center justify-center mr-2 text-xs"><i class="fa-solid fa-map-location-dot"></i></div>Görev Yerleri</h3><button onclick="addNewSlot()" class="text-xs bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg font-bold hover:bg-slate-200 transition">+ Ekle</button></div>
 <div id="slotsConfigList" class="space-y-3"></div>
-<button onclick="addNewSlot()" class="w-full mt-4 py-3 border-2 border-dashed border-slate-300 text-slate-500 rounded-xl font-bold hover:bg-slate-50 hover:text-slate-700 transition">
-<i class="fa-solid fa-plus mr-1"></i> Yeni Saha Ekle
-</button>
-<div class="h-px bg-slate-100 my-6"></div>
-<h4 class="font-bold text-slate-700 text-sm mb-3 border-l-4 border-blue-500 pl-2">Rapor İşlemleri</h4>
-<div class="grid grid-cols-1 gap-3 mb-6">
-<button onclick="downloadReport()" class="w-full bg-green-600 text-white font-bold py-3.5 rounded-xl shadow hover:bg-green-700 transition flex items-center justify-center gap-2 text-sm">
-<i class="fa-solid fa-share-nodes text-lg"></i> 
-<div class="text-left leading-tight">
-<div>Özet Raporu Paylaş</div>
-<div class="text-[10px] opacity-80 font-normal">Kişi Bazlı (CSV)</div>
+<button onclick="saveSettings()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-100 hover:bg-blue-700 transition text-sm mt-4">Kaydet</button>
 </div>
-</button>
-<button onclick="downloadScheduleReport()" class="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl shadow hover:bg-blue-700 transition flex items-center justify-center gap-2 text-sm">
-<i class="fa-solid fa-share-nodes text-lg"></i>
-<div class="text-left leading-tight">
-<div>Çizelgeyi Paylaş</div>
-<div class="text-[10px] opacity-80 font-normal">Tarih Bazlı (CSV)</div>
-</div>
-</button>
-<button onclick="downloadFullReport()" class="w-full bg-slate-700 text-white font-bold py-3.5 rounded-xl shadow hover:bg-slate-800 transition flex items-center justify-center gap-2 text-sm mt-1">
-<i class="fa-solid fa-file-excel text-lg text-green-400"></i>
-<div class="text-left leading-tight">
-<div>Tam Excel Olarak Paylaş</div>
-<div class="text-[10px] opacity-80 font-normal">Tek dosyada tüm raporlar (.xlsx)</div>
-</div>
-</button>
-</div>
-<div class="h-px bg-slate-100 my-6"></div>
-<button onclick="saveSettings()" class="w-full bg-slate-800 text-white font-bold py-3.5 rounded-xl shadow-lg hover:bg-slate-900 transition">
-
-                    Ayarları Güncelle
-</button>
-<div class="mt-6 text-center">
-<button onclick="clearAllSystem()" class="text-xs text-red-500 hover:text-red-700 font-medium underline">
-
-                        Tüm Verileri Sıfırla
-</button>
+<div class="grid grid-cols-2 gap-3">
+<div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200"><h4 class="font-bold text-xs text-slate-500 uppercase mb-2">Yedekleme (JSON formatında)</h4><div class="flex gap-2"><button onclick="backupData()" class="flex-1 bg-blue-50 text-blue-600 border border-blue-100 rounded-lg text-xs font-bold hover:bg-blue-100 flex flex-col items-center justify-center py-2 transition h-14"><i class="fa-solid fa-download text-lg mb-1"></i> İndir</button><label class="flex-1 bg-orange-50 text-orange-600 border border-orange-100 rounded-lg text-xs font-bold hover:bg-orange-100 cursor-pointer flex flex-col items-center justify-center py-2 transition h-14"><i class="fa-solid fa-upload text-lg mb-1"></i> Yükle<input type="file" id="restoreInput" class="hidden" onchange="restoreData(this)"></label></div></div>
+<div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200"><h4 class="font-bold text-xs text-slate-500 uppercase mb-2">Sıfırlama</h4><button onclick="clearAllSystem()" class="w-full h-14 bg-red-50 text-red-600 font-bold rounded-lg border border-red-100 text-xs flex flex-col items-center justify-center hover:bg-red-100 transition"><i class="fa-solid fa-trash-can text-lg mb-1"></i>Temizle</button></div>
 </div>
 </div>
 </div>
 </main>
-<!-- Footer -->
-<footer class="bg-white border-t border-slate-200 p-6 text-center z-10 safe-area-pb">
-<div class="max-w-md mx-auto">
-<div class="inline-block shadow-md mb-2">
-<img src="https://upload.wikimedia.org/wikipedia/commons/b/b4/Flag_of_Turkey.svg" alt="Türkiye" class="h-6 w-auto rounded-[2px] border border-slate-100">
-</div>
-<p class="text-slate-600 italic font-serif text-sm">"Beni Türk hekimlerine emanet ediniz."</p>
-<p class="text-slate-900 font-bold text-xs mt-1 tracking-widest uppercase">ATATÜRK</p>
-</div>
+<footer class="bg-white border-t border-slate-200 p-2 text-center z-10 shrink-0 safe-area-pb absolute bottom-0 w-full">
+<div class="flex items-center justify-center gap-2 opacity-80"><img src="https://upload.wikimedia.org/wikipedia/commons/b/b4/Flag_of_Turkey.svg" alt="Türkiye" class="h-3 w-auto rounded-[1px] border border-slate-200"><p class="text-slate-600 italic font-serif text-[10px]">"Vatanını en çok seven görevini en iyi yapandır."</p><span class="text-slate-900 font-bold text-[9px] uppercase tracking-wider"ATATÜRK</span></div>
 </footer>
-<!-- NÖBET ATAMA MODALI -->
-<div id="dayModal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-end sm:items-center justify-center z-50">
-<div class="modal-overlay absolute w-full h-full bg-slate-900/60 backdrop-blur-sm" onclick="closeModal('dayModal')"></div>
-<div class="modal-container bg-white w-full max-w-md mx-auto rounded-t-3xl sm:rounded-2xl shadow-2xl z-50 overflow-y-auto max-h-[90vh] flex flex-col">
-<div class="bg-red-600 p-4 text-white rounded-t-3xl sm:rounded-t-2xl sticky top-0 z-10 flex justify-between items-center shadow-md">
-<div>
-<h3 id="modalDateTitle" class="text-lg font-bold">Tarih</h3>
-<p class="text-xs text-red-100">Personel Atama Ekranı</p>
-</div>
-<button onclick="closeModal('dayModal')" class="bg-white/20 hover:bg-white/30 rounded-full w-8 h-8 flex items-center justify-center transition"><i class="fa-solid fa-xmark"></i></button>
-</div>
-<div class="p-4 space-y-4 flex-1 bg-slate-50">
-<div id="restWarningBox" class="hidden bg-slate-200 text-slate-600 text-xs p-3 rounded-lg mb-2 border border-slate-300">
-<i class="fa-solid fa-bed mr-1.5 text-slate-500"></i> <strong id="restingCount" class="text-slate-800">0</strong> personel dün nöbetçi olduğu için listede gösterilmiyor.
-</div>
-<div id="modalWarnings" class="hidden bg-amber-50 border border-amber-200 text-amber-800 text-xs p-3 rounded-xl shadow-sm"></div>
-<div id="modalSlotsArea" class="space-y-4"></div>
-</div>
-<div class="p-4 border-t bg-white sticky bottom-0 safe-area-pb">
-<button onclick="closeModal('dayModal')" class="w-full bg-red-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-red-200 active:scale-95 transition">Tamam</button>
-</div>
-</div>
-</div>
-<!-- İSTATİSTİK MODALI -->
-<div id="statsModal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-end sm:items-center justify-center z-50">
-<div class="modal-overlay absolute w-full h-full bg-slate-900/60 backdrop-blur-sm" onclick="closeModal('statsModal')"></div>
-<div class="modal-container bg-white w-full max-w-md mx-auto rounded-t-3xl sm:rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col">
-<div class="bg-slate-800 p-4 text-white rounded-t-3xl sm:rounded-t-2xl flex justify-between items-center">
-<h3 id="statsDocTitle" class="text-lg font-bold">İstatistikler</h3>
-<button onclick="closeModal('statsModal')" class="text-white hover:bg-slate-700 p-2 rounded-full"><i class="fa-solid fa-xmark"></i></button>
-</div>
-<div id="statsContent" class="p-5 overflow-y-auto max-h-[80vh] bg-slate-50"></div>
-</div>
-</div>
-<!-- PREMIUM MODAL -->
-<div id="premiumModal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-50 px-4">
-<div class="modal-overlay absolute w-full h-full bg-slate-900/80 backdrop-blur-sm" onclick="closeModal('premiumModal')"></div>
-<div class="modal-container bg-white w-full max-w-sm mx-auto rounded-2xl shadow-2xl z-50 overflow-hidden relative transform transition-all scale-95">
-<div class="h-32 premium-gradient flex items-center justify-center relative overflow-hidden">
-<i class="fa-solid fa-crown text-6xl text-white/30 absolute"></i>
-<h2 class="text-3xl font-bold text-white relative z-10 drop-shadow-md">MediNöbet PRO</h2>
-</div>
-<div class="p-6 text-center">
-<p class="text-slate-600 mb-6 text-sm">Ücretsiz sürümde sınırlı erişiminiz bulunmaktadır. Sınırsız kullanım için Pro'ya geçin.</p>
-<ul class="text-left space-y-3 mb-8 text-sm">
-<li class="flex items-center gap-3"><i class="fa-solid fa-check text-green-500"></i> Sınırsız Personel</li>
-<li class="flex items-center gap-3"><i class="fa-solid fa-check text-green-500"></i> Sınırsız Saha</li>
-<li class="flex items-center gap-3"><i class="fa-solid fa-check text-green-500"></i> Excel Raporu</li>
-</ul>
-<button onclick="buyPro()" class="w-full premium-gradient text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition transform active:scale-95 text-lg flex items-center justify-center gap-2">
-<span>399.99 ₺</span> <span class="text-xs opacity-80 font-normal">(Tek Seferlik)</span>
-</button>
-<button onclick="closeModal('premiumModal')" class="mt-4 text-slate-400 text-xs hover:text-slate-600">Hayır, teşekkürler</button>
-</div>
-</div>
-</div>
+<!-- MODALLAR -->
+<div id="dayModal" class="modal opacity-0 pointer-events-none fixed inset-0 z-50 flex items-end sm:items-center justify-center"><div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal('dayModal')"></div><div class="bg-white w-full max-w-lg mx-auto rounded-t-3xl sm:rounded-2xl shadow-2xl relative z-10 flex flex-col h-[85vh] sm:h-[600px]"><div class="p-4 border-b border-slate-100 flex justify-between items-center bg-white rounded-t-3xl"><div><h3 id="modalDateTitle" class="text-lg font-bold text-slate-800">Tarih</h3><p class="text-xs text-slate-500">Görev Atama</p></div><button onclick="closeModal('dayModal')" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button></div><div class="px-4 py-2 bg-slate-50 border-b border-slate-100 flex justify-between items-center"><span class="text-xs font-bold text-slate-600 flex items-center gap-2"><i class="fa-solid fa-umbrella-beach text-orange-400"></i> Tatil/Haftasonu</span><div class="relative inline-block w-9 align-middle select-none"><input type="checkbox" id="holidayToggle" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer border-slate-300"/><label for="holidayToggle" class="toggle-label block overflow-hidden h-5 rounded-full bg-slate-300 cursor-pointer"></label></div></div><div id="modalShiftTabs" class="flex border-b border-slate-100 px-2 pt-2 bg-white hidden"></div><div class="p-4 overflow-y-auto flex-1 bg-slate-50/50"><div id="restWarningBox" class="hidden mb-3 bg-orange-50 text-orange-700 text-xs p-3 rounded-xl border border-orange-100 flex items-start gap-2"><i class="fa-solid fa-triangle-exclamation mt-0.5"></i><div><strong id="restingCount">0</strong> personel dinleniyor.</div></div><div id="modalSlotsArea" class="space-y-3"></div></div><div class="p-4 border-t border-slate-100 bg-white"><button onclick="closeModal('dayModal')" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-lg active:scale-95 transition">Kaydet</button></div></div></div>
+<div id="prefModal" class="modal opacity-0 pointer-events-none fixed inset-0 z-50 flex items-center justify-center"><div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal('prefModal')"></div><div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl relative z-10 flex flex-col overflow-hidden m-4"><div class="bg-slate-800 p-4 text-white flex justify-between items-center"><h3 id="prefModalTitle" class="font-bold">Tercihler</h3><button onclick="closeModal('prefModal')" class="text-white/70 hover:text-white"><i class="fa-solid fa-xmark"></i></button></div><div class="p-4 bg-slate-50 space-y-3" id="prefModalContent"></div><div class="p-3 border-t bg-white"><button onclick="closeModal('prefModal')" class="w-full bg-slate-800 text-white font-bold py-2 rounded-lg text-sm">Tamam</button></div></div></div>
+<div id="statsModal" class="modal opacity-0 pointer-events-none fixed inset-0 z-50 flex items-end sm:items-center justify-center"><div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal('statsModal')"></div><div class="bg-white w-full max-w-md sm:rounded-2xl rounded-t-3xl shadow-2xl relative z-10 flex flex-col max-h-[80vh]"><div class="p-4 border-b border-slate-100 flex justify-between items-center"><h3 id="statsDocTitle" class="text-lg font-bold text-slate-800">İstatistik</h3><button onclick="closeModal('statsModal')" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button></div><div id="statsContent" class="p-5 overflow-y-auto bg-slate-50"></div></div></div>
 <script>
 
-        // --- AYARLAR ---
+        let currentDate = new Date(); let currentPrefDate = new Date();
 
-        let currentDate = new Date();
+        let settings = JSON.parse(localStorage.getItem('mediSettings')) || { mode: 1, startDate: new Date().getFullYear()+'-01-01', slots: [{ id: 1, name: "Bölge 1", min_wd: 1, max_wd: 2, min_we: 1, max_we: 1 }, { id: 2, name: "Bölge 2", min_wd: 1, max_wd: 2, min_we: 1, max_we: 2 }] };
 
-        let currentPrefDate = new Date();
+        if(!settings.mode) settings.mode=1; if(!settings.startDate) settings.startDate = new Date().getFullYear()+'-01-01';
 
-        let settings = JSON.parse(localStorage.getItem('mediSettings')) || {
-
-            slots: [
-
-                { id: 1, name: "Servis", min: 1, max: 2 },
-
-                { id: 2, name: "Acil", min: 1, max: 2 },
-
-                { id: 3, name: "Triyaj", min: 1, max: 1 }
-
-            ]
-
-        };
+        settings.slots = settings.slots.map(s => { if (s.min !== undefined) return { id: s.id, name: s.name, min_wd: s.min, max_wd: s.max, min_we: s.min, max_we: s.max }; return s; });
 
         let doctors = JSON.parse(localStorage.getItem('mediDoctors')) || [];
 
         let assignments = JSON.parse(localStorage.getItem('mediAssignments')) || {};
 
+        if(Object.keys(assignments).length > 0) { let k = Object.keys(assignments)[0]; if(!assignments[k].shift1 && assignments[k].slot1) { let n = {}; Object.keys(assignments).forEach(dk => { n[dk] = { shift1: assignments[dk] }; }); assignments = n; localStorage.setItem('mediAssignments', JSON.stringify(assignments)); } }
+
+        let officialHolidays = JSON.parse(localStorage.getItem('mediHolidays')) || []; 
+
         let editingDoc = { id: null, name: "", prefs: {} };
 
-        // Pro Kilitleri KALDIRILDI (Test için)
+        let totalChart = null; let weekendChart = null; let slotCharts = {};
 
-        // let isPremium = localStorage.getItem('mediIsPremium') === 'true'; 
+        const shiftLabels = { 1: ["Tek Vardiya/Nöbet"], 2: ["08:00 - 20:00", "20:00 - 08:00"], 3: ["08:00 - 16:00", "16:00 - 24:00", "24:00 - 08:00"] };
 
-        // const FREE_DOC_LIMIT = 3; ... 
+        let statMode = 'monthly';
 
-        document.addEventListener('DOMContentLoaded', () => {
-
-            renderCalendar();
-
-            renderSettings();
-
-            renderDoctorsList();
-
-            renderPrefCalendar();
-
-        });
-
-        // --- TAB YÖNETİMİ ---
+        document.addEventListener('DOMContentLoaded', () => { renderCalendar(); renderSettings(); updateModeUI(); renderDoctorsList(); renderPrefCalendar(); document.getElementById('cumulativeStartDate').value = settings.startDate; });
 
         function switchTab(tabName) {
 
-            document.getElementById('view-calendar').classList.add('hidden');
+            ['calendar', 'doctors', 'stats', 'settings'].forEach(t => { document.getElementById(`view-${t}`).classList.add('hidden'); document.getElementById(`tab-${t}`).className = `flex-1 h-full flex flex-col items-center justify-center gap-1 text-slate-400 transition tab-inactive`; });
 
-            document.getElementById('view-doctors').classList.add('hidden');
-
-            document.getElementById('view-settings').classList.add('hidden');
-
-            ['calendar', 'doctors', 'settings'].forEach(t => {
-
-                const btn = document.getElementById(`tab-${t}`);
-
-                if(t === tabName) {
-
-                    btn.classList.remove('tab-inactive');
-
-                    btn.classList.add('tab-active');
-
-                    document.getElementById(`view-${t}`).classList.remove('hidden');
-
-                } else {
-
-                    btn.classList.remove('tab-active');
-
-                    btn.classList.add('tab-inactive');
-
-                }
-
-            });
+            document.getElementById(`view-${tabName}`).classList.remove('hidden'); document.getElementById(`tab-${tabName}`).className = `flex-1 h-full flex flex-col items-center justify-center gap-1 text-blue-600 tab-active transition`;
 
             if(tabName === 'calendar') renderCalendar();
 
-            if(tabName === 'doctors') {
+            if(tabName === 'stats') setTimeout(renderStats, 100);
 
-                editingDoc = { id: null, name: "", prefs: {} };
+            if(tabName === 'settings') { renderSettings(); updateModeUI(); }
 
-                document.getElementById('docNameInput').value = "";
-
-                renderPrefCalendar();
-
-            }
+            if(tabName === 'doctors') { resetDoctorForm(); renderPrefCalendar(); }
 
         }
 
-        // --- TAKVİM ---
+        // --- EXCEL & DİĞER ---
+
+        function saveDoctor() { 
+
+            const n = document.getElementById('docNameInput').value.trim(); 
+
+            if(!n) return alert('İsim girin'); 
+
+            if(editingDoc.id) { 
+
+                const i = doctors.findIndex(d=>d.id===editingDoc.id); 
+
+                doctors[i] = {...editingDoc, name:n}; 
+
+            } else { 
+
+                doctors.push({id:Date.now(), name:n, prefs:editingDoc.prefs}); 
+
+            } 
+
+            localStorage.setItem('mediDoctors', JSON.stringify(doctors)); 
+
+            resetDoctorForm(); // Kayıttan sonra sıfırla
+
+            renderPrefCalendar(); 
+
+            renderDoctorsList(); 
+
+            // alert('Kaydedildi!'); // Kullanıcı akışını kesmemek için alert'i kaldırdım
+
+        }
+
+        function editDoctor(id) { 
+
+            const d = doctors.find(d=>d.id===id); 
+
+            if(d) { 
+
+                editingDoc=JSON.parse(JSON.stringify(d)); 
+
+                document.getElementById('docNameInput').value=d.name; 
+
+                document.getElementById('docNameInput').focus();
+
+                // Düzenleme Modu UI
+
+                document.getElementById('docCardTitle').textContent = "Personel Düzenle";
+
+                document.getElementById('btnResetDoc').classList.remove('hidden');
+
+                document.getElementById('doctorCard').classList.add('border-blue-400', 'ring-2', 'ring-blue-100');
+
+                document.getElementById('btnSaveDoc').textContent = "Güncelle";
+
+                renderPrefCalendar(); 
+
+                document.querySelector('#main-scroll').scrollTop=0; 
+
+                switchTab('doctors'); 
+
+            } 
+
+        }
+
+        function resetDoctorForm() {
+
+            editingDoc = { id: null, name: "", prefs: {} };
+
+            document.getElementById('docNameInput').value = "";
+
+            // Yeni Ekleme Modu UI
+
+            document.getElementById('docCardTitle').textContent = "Yeni Personel Ekle";
+
+            document.getElementById('btnResetDoc').classList.add('hidden');
+
+            document.getElementById('doctorCard').classList.remove('border-blue-400', 'ring-2', 'ring-blue-100');
+
+            document.getElementById('btnSaveDoc').textContent = "Kaydet";
+
+            renderPrefCalendar();
+
+        }
+
+        function deleteDoctor(id) { if(confirm('Sil?')) { doctors=doctors.filter(d=>d.id!==id); localStorage.setItem('mediDoctors', JSON.stringify(doctors)); renderDoctorsList(); } }
+
+        function renderDoctorsList() { 
+
+            document.getElementById('doctorsList').innerHTML = doctors.map(d => `
+<li class="flex justify-between bg-white p-3 rounded-xl shadow-sm border border-slate-100 cursor-pointer hover:bg-blue-50 transition" onclick="editDoctor(${d.id})">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs">${d.name.charAt(0)}</div>
+<span class="font-bold text-sm text-slate-700">${d.name}</span>
+</div>
+<div class="flex gap-2">
+<button onclick="event.stopPropagation(); deleteDoctor(${d.id})" class="text-slate-400 hover:text-red-500 p-2"><i class="fa-solid fa-trash"></i></button>
+</div>
+</li>`).join(''); 
+
+        }
+
+        // --- (DİĞER TÜM FONKSİYONLAR AYNI ŞEKİLDE DEVAM EDİYOR - KISALIK İÇİN TEKRARLAMADIM) ---
+
+        // calculateStats, calculateSlotStats, saveCumulativeDate, changeShiftMode, updateModeUI
+
+        // changeMonth, renderCalendar, isDayHoliday, getSlotLimit, validateDayStatus, toggleHoliday
+
+        // changePrefMonth, renderPrefCalendar, openPrefModal, setPref
+
+        // openDayModal, closeModal, renderModalSlots, toggleAssignment
+
+        // autoDistribute, renderSettings, updateSlot, addNewSlot, deleteSlot, saveSettings, clearAllSystem, deleteAssignment
+
+        // backupData, restoreData, renderStats, downloadFullReport
+
+        // ... (Bu fonksiyonlar önceki versiyondaki gibi kalacak) ...
+
+        // --- EKSİK FONKSİYONLARI TAMAMLAYALIM (Hata almamak için) ---
+
+        function calculateStats(docName, isCumulative) { let total = 0; let weekend = 0; let startDateStr = settings.startDate; let monthPrefix = `${currentDate.getFullYear()}-${String(currentDate.getMonth()+1).padStart(2,'0')}`; Object.keys(assignments).forEach(dateStr => { if (isCumulative) { if (dateStr < startDateStr) return; } else { if (!dateStr.startsWith(monthPrefix)) return; } let w=false; let h=isDayHoliday(dateStr); for(let s=1; s<=settings.mode; s++) { if(assignments[dateStr][`shift${s}`]) Object.values(assignments[dateStr][`shift${s}`]).forEach(l=>{if(l.includes(docName)) w=true}); } if(w) { total++; if(h) weekend++; } }); return { total, weekend }; }
+
+        function calculateSlotStats(docName, slotId, isCumulative) { let count = 0; let startDateStr = settings.startDate; let monthPrefix = `${currentDate.getFullYear()}-${String(currentDate.getMonth()+1).padStart(2,'0')}`; Object.keys(assignments).forEach(dateStr => { if (isCumulative) { if (dateStr < startDateStr) return; } else { if (!dateStr.startsWith(monthPrefix)) return; } for(let s=1; s<=settings.mode; s++) { if(assignments[dateStr][`shift${s}`] && assignments[dateStr][`shift${s}`][`slot${slotId}`]?.includes(docName)) count++; } }); return count; }
+
+        function saveCumulativeDate() { const val = document.getElementById('cumulativeStartDate').value; if(val) { settings.startDate = val; localStorage.setItem('mediSettings', JSON.stringify(settings)); alert("Tarih kaydedildi."); } }
+
+        function changeShiftMode(mode) { if(settings.mode !== mode) { if(confirm("Mod değişecek. Takvim görünümü yenilenecek. Onaylıyor musunuz?")) { settings.mode = mode; localStorage.setItem('mediSettings', JSON.stringify(settings)); updateModeUI(); renderCalendar(); } } }
+
+        function updateModeUI() { [1, 2, 3].forEach(m => { const btn = document.getElementById(`mode-${m}`); if(settings.mode === m) btn.className = "border-2 border-blue-600 bg-blue-50 text-blue-700 p-2 rounded-xl text-center flex flex-col items-center gap-1 shadow-sm"; else btn.className = "border border-slate-200 p-2 rounded-xl text-center text-slate-400 hover:bg-slate-50 transition flex flex-col items-center gap-1"; }); }
 
         function changeMonth(dir) { currentDate.setMonth(currentDate.getMonth() + dir); renderCalendar(); }
 
-        function renderCalendar() {
+        function renderCalendar() { const grid = document.getElementById('calendarGrid'); grid.innerHTML = ''; const year = currentDate.getFullYear(); const month = currentDate.getMonth(); document.getElementById('currentMonthLabel').textContent = new Date(year, month).toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' }); const firstDay = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate(); let startOffset = firstDay === 0 ? 6 : firstDay - 1; for(let i=0; i<startOffset; i++) grid.innerHTML += `<div></div>`; for(let d=1; d<=daysInMonth; d++) { const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; const dateObj = new Date(year, month, d); const dayName = dateObj.toLocaleDateString('tr-TR', { weekday: 'short' }); const isHoliday = isDayHoliday(dateStr); const status = validateDayStatus(dateStr); let bgClass = isHoliday ? 'is-holiday' : 'bg-white'; if(!isHoliday) { if(status === 'error') bgClass = 'bg-red-50 border-red-200'; else if(status === 'ok') bgClass = 'bg-green-50 border-green-200'; } let shiftsHtml = ''; for(let s=1; s<=settings.mode; s++) { let names = []; if(assignments[dateStr] && assignments[dateStr][`shift${s}`]) Object.values(assignments[dateStr][`shift${s}`]).forEach(list => names.push(...list)); names = [...new Set(names)]; let content = names.map(n => `<span class="name-tag">${n}</span>`).join(''); let label = settings.mode > 1 ? `<div class="shift-label">${s}. V</div>` : ""; shiftsHtml += `<div class="shift-box ${names.length===0?'bg-slate-50/50':''}">${label}<div class="flex flex-wrap gap-0.5 overflow-hidden cal-scroll" style="max-height:100%;overflow-y:auto;">${content}</div></div>`; } const div = document.createElement('div'); div.className = `cal-day ${bgClass}`; div.innerHTML = `<div class="flex justify-between w-full p-1 border-b border-black/5 shrink-0"><span class="font-bold text-xs text-slate-700">${d}</span></div><div class="flex flex-col flex-1 w-full h-full min-h-0">${shiftsHtml}</div>`; div.onclick = () => openDayModal(dateStr); grid.appendChild(div); } }
 
-            const grid = document.getElementById('calendarGrid');
+        function isDayHoliday(ds) { const d = new Date(ds); const day = d.getDay(); return day===0 || day===6 || officialHolidays.includes(ds); }
 
-            const lbl = document.getElementById('currentMonthLabel');
+        function getSlotLimit(slot, ds) { return isDayHoliday(ds) ? { min: slot.min_we, max: slot.max_we } : { min: slot.min_wd, max: slot.max_wd }; }
 
-            grid.innerHTML = '';
+        function validateDayStatus(ds) { if(!assignments[ds]) return 'neutral'; let isOk=true; let hasAny=false; for(let s=1; s<=settings.mode; s++) { if(assignments[ds][`shift${s}`]) { settings.slots.forEach(slot => { const limit = getSlotLimit(slot, ds); const c = (assignments[ds][`shift${s}`][`slot${slot.id}`]||[]).length; if(c>0) hasAny=true; if(c<limit.min || c>limit.max) isOk=false; }); } else if(settings.slots.some(sl => sl.min_wd>0)) isOk=false; } return !hasAny ? 'neutral' : (isOk ? 'ok' : 'error'); }
 
-            const year = currentDate.getFullYear();
-
-            const month = currentDate.getMonth();
-
-            lbl.textContent = new Date(year, month).toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
-
-            const firstDay = new Date(year, month, 1).getDay();
-
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-            let startOffset = firstDay === 0 ? 6 : firstDay - 1;
-
-            for(let i=0; i<startOffset; i++) grid.innerHTML += `<div></div>`;
-
-            for(let d=1; d<=daysInMonth; d++) {
-
-                const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-
-                const dateObj = new Date(year, month, d);
-
-                const dayName = dateObj.toLocaleDateString('tr-TR', { weekday: 'short' }); 
-
-                const status = validateDayStatus(dateStr);
-
-                let statusClass = 'status-neutral';
-
-                if(status === 'error') statusClass = 'status-error'; else if(status === 'ok') statusClass = 'status-ok';
-
-                let assignedNames = [];
-
-                if(assignments[dateStr]) { Object.values(assignments[dateStr]).forEach(docs => { if(Array.isArray(docs)) assignedNames.push(...docs); }); }
-
-                let namesHtml = '';
-
-                if(assignedNames.length > 0) {
-
-                    namesHtml = `<div class="w-full mt-1 flex flex-col gap-1 overflow-y-auto no-scrollbar" style="max-height: 100%;">`;
-
-                    [...new Set(assignedNames)].forEach(name => {
-
-                        namesHtml += `<div class="flex items-center justify-between bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 group"><span class="text-[9px] font-medium text-slate-700 truncate">${name}</span><button onclick="deleteAssignment(event, '${dateStr}', '${name}')" class="text-red-400 hover:text-red-600 text-[10px] w-3 h-3 flex items-center justify-center"><i class="fa-solid fa-times"></i></button></div>`;
-
-                    });
-
-                    namesHtml += `</div>`;
-
-                }
-
-                const dayDiv = document.createElement('div');
-
-                dayDiv.className = `cal-day ${statusClass}`;
-
-                dayDiv.innerHTML = `<div class="flex justify-between w-full items-baseline border-b border-black/5 pb-1 mb-1 shrink-0"><span class="font-bold text-sm leading-none text-slate-700">${d}</span><span class="text-[9px] font-bold uppercase text-slate-400 leading-none">${dayName}</span></div>${namesHtml}`;
-
-                if(status === 'error') dayDiv.innerHTML += `<span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>`;
-
-                dayDiv.onclick = () => openDayModal(dateStr);
-
-                grid.appendChild(dayDiv);
-
-            }
-
-        }
-
-        function deleteAssignment(e, dateStr, docName) {
-
-            e.stopPropagation(); 
-
-            if(!confirm(`${docName} silinsin mi?`)) return;
-
-            if (assignments[dateStr]) {
-
-                let changed = false;
-
-                Object.keys(assignments[dateStr]).forEach(slotKey => {
-
-                    if (assignments[dateStr][slotKey].includes(docName)) {
-
-                        assignments[dateStr][slotKey] = assignments[dateStr][slotKey].filter(n => n !== docName);
-
-                        changed = true;
-
-                    }
-
-                });
-
-                if (changed) { localStorage.setItem('mediAssignments', JSON.stringify(assignments)); renderCalendar(); }
-
-            }
-
-        }
-
-        function validateDayStatus(dateStr) {
-
-            if(!assignments[dateStr]) return 'neutral'; 
-
-            let dayAssigns = assignments[dateStr];
-
-            let isOk = true; let hasAny = false;
-
-            settings.slots.forEach(slot => {
-
-                const assignedCount = (dayAssigns[`slot${slot.id}`] || []).length;
-
-                if(assignedCount > 0) hasAny = true;
-
-                if(assignedCount < slot.min || assignedCount > slot.max) isOk = false;
-
-            });
-
-            if(!hasAny) return 'neutral';
-
-            return isOk ? 'ok' : 'error';
-
-        }
-
-        // --- ATAMA MODALI ---
-
-        let selectedDateStr = "";
-
-        function openDayModal(dateStr) {
-
-            selectedDateStr = dateStr;
-
-            const dateObj = new Date(dateStr);
-
-            document.getElementById('modalDateTitle').textContent = dateObj.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' });
-
-            document.getElementById('dayModal').classList.remove('opacity-0', 'pointer-events-none');
-
-            document.body.classList.add('modal-active');
-
-            renderModalSlots();
-
-        }
-
-        function closeModal(modalId) {
-
-            document.getElementById(modalId).classList.add('opacity-0', 'pointer-events-none');
-
-            document.body.classList.remove('modal-active');
-
-            if(modalId === 'dayModal') renderCalendar();
-
-        }
-
-        function renderModalSlots() {
-
-            const container = document.getElementById('modalSlotsArea');
-
-            container.innerHTML = '';
-
-            let dayAssigns = assignments[selectedDateStr] || {};
-
-            let warnings = [];
-
-            const d = new Date(selectedDateStr); d.setDate(d.getDate() - 1);
-
-            const prevDateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-
-            let restingDoctors = [];
-
-            if(assignments[prevDateStr]) { Object.values(assignments[prevDateStr]).forEach(list => { if(Array.isArray(list)) restingDoctors.push(...list); }); }
-
-            restingDoctors = [...new Set(restingDoctors)];
-
-            const restInfoBox = document.getElementById('restWarningBox');
-
-            if(restingDoctors.length > 0) { restInfoBox.classList.remove('hidden'); document.getElementById('restingCount').textContent = restingDoctors.length; } else { restInfoBox.classList.add('hidden'); }
-
-            let sortedDoctors = [...doctors].sort((a, b) => {
-
-                const prefA = a.prefs[selectedDateStr] || 0;
-
-                const prefB = b.prefs[selectedDateStr] || 0;
-
-                const getWeight = (p) => p === 1 ? 0 : (p === 0 ? 1 : 2);
-
-                return getWeight(prefA) - getWeight(prefB);
-
-            });
-
-            settings.slots.forEach(slot => {
-
-                const currentDocs = dayAssigns[`slot${slot.id}`] || [];
-
-                const slotDiv = document.createElement('div');
-
-                slotDiv.className = "border border-slate-200 rounded-xl p-3 bg-white shadow-sm";
-
-                let countColor = "text-slate-500";
-
-                if(currentDocs.length < slot.min) { countColor = "text-red-600 font-bold"; warnings.push(`${slot.name}: Eksik personel.`); }
-
-                else if(currentDocs.length > slot.max) { countColor = "text-red-600 font-bold"; warnings.push(`${slot.name}: Fazla personel.`); }
-
-                else if(currentDocs.length > 0) { countColor = "text-green-600 font-bold"; }
-
-                slotDiv.innerHTML = `<div class="flex justify-between items-center mb-2.5"><span class="font-bold text-sm text-slate-800">${slot.name}</span><span class="text-xs ${countColor} bg-slate-100 px-2 py-0.5 rounded-full">(${currentDocs.length} / ${slot.min}-${slot.max})</span></div>`;
-
-                const buttonsDiv = document.createElement('div');
-
-                buttonsDiv.className = "flex flex-wrap gap-2";
-
-                sortedDoctors.forEach(doc => {
-
-                    const isAssignedHere = currentDocs.includes(doc.name);
-
-                    const isResting = restingDoctors.includes(doc.name);
-
-                    if (isResting && !isAssignedHere) return;
-
-                    const pref = doc.prefs[selectedDateStr] || 0; 
-
-                    let btnClass = "px-3 py-2 rounded-lg text-xs border transition flex items-center gap-1.5 font-medium ";
-
-                    let icon = ""; let additionalText = "";
-
-                    if(isAssignedHere) {
-
-                        btnClass += "bg-red-600 text-white border-red-600 shadow-md transform scale-105"; icon = `<i class="fa-solid fa-check"></i>`;
-
-                        if(isResting) { btnClass = "px-3 py-2 rounded-lg text-xs border bg-amber-500 text-white border-amber-600"; additionalText = "(Yorgun!)"; }
-
-                    } else { btnClass += "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"; }
-
-                    if(!isAssignedHere) { if(pref === 1) icon += `<i class="fa-solid fa-star text-yellow-400"></i>`; if(pref === 2) icon += `<i class="fa-solid fa-ban text-red-400"></i>`; }
-
-                    const btn = document.createElement('button'); btn.className = btnClass; btn.innerHTML = `${icon} ${doc.name} ${additionalText}`; btn.onclick = () => toggleAssignment(slot.id, doc.name); buttonsDiv.appendChild(btn);
-
-                });
-
-                slotDiv.appendChild(buttonsDiv); container.appendChild(slotDiv);
-
-            });
-
-            const warnBox = document.getElementById('modalWarnings');
-
-            if(warnings.length > 0) { warnBox.classList.remove('hidden'); warnBox.innerHTML = `<strong>Durum:</strong><ul class="list-disc list-inside mt-1">${warnings.map(w => `<li>${w}</li>`).join('')}</ul>`; } else { warnBox.classList.add('hidden'); }
-
-        }
-
-        function toggleAssignment(slotId, docName) {
-
-            if(!assignments[selectedDateStr]) assignments[selectedDateStr] = {};
-
-            let slotKey = `slot${slotId}`;
-
-            let current = assignments[selectedDateStr][slotKey] || [];
-
-            if(current.includes(docName)) { current = current.filter(n => n !== docName); } else {
-
-                settings.slots.forEach(s => { let k = `slot${s.id}`; if(assignments[selectedDateStr][k] && assignments[selectedDateStr][k].includes(docName)) { assignments[selectedDateStr][k] = assignments[selectedDateStr][k].filter(n => n !== docName); } });
-
-                current.push(docName);
-
-            }
-
-            assignments[selectedDateStr][slotKey] = current;
-
-            localStorage.setItem('mediAssignments', JSON.stringify(assignments));
-
-            renderModalSlots();
-
-        }
-
-        // --- YARDIMCI ---
+        function toggleHoliday(ds) { if(officialHolidays.includes(ds)) officialHolidays = officialHolidays.filter(d=>d!==ds); else officialHolidays.push(ds); localStorage.setItem('mediHolidays', JSON.stringify(officialHolidays)); renderCalendar(); renderStats(); }
 
         function changePrefMonth(dir) { currentPrefDate.setMonth(currentPrefDate.getMonth() + dir); renderPrefCalendar(); }
 
-        function renderPrefCalendar() { const grid = document.getElementById('prefGrid'); const lbl = document.getElementById('prefMonthLabel'); grid.innerHTML = ''; const year = currentPrefDate.getFullYear(); const month = currentPrefDate.getMonth(); lbl.textContent = new Date(year, month).toLocaleDateString('tr-TR', { month: 'short', year: 'numeric' }); const firstDay = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate(); let startOffset = firstDay === 0 ? 6 : firstDay - 1; for(let i=0; i<startOffset; i++) grid.innerHTML += `<div></div>`; for(let d=1; d<=daysInMonth; d++) { const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; const pref = editingDoc.prefs[dateStr] || 0; const dayDiv = document.createElement('div'); let colorClass = "bg-white text-slate-600 border border-slate-100"; if(pref === 1) colorClass = "pref-wanted"; if(pref === 2) colorClass = "pref-blocked"; dayDiv.className = `h-8 flex items-center justify-center rounded cursor-pointer text-xs font-bold ${colorClass}`; dayDiv.textContent = d; dayDiv.onclick = () => { let next = (pref + 1) % 3; if(next === 0) delete editingDoc.prefs[dateStr]; else editingDoc.prefs[dateStr] = next; renderPrefCalendar(); }; grid.appendChild(dayDiv); } }
+        function renderPrefCalendar() { const grid = document.getElementById('prefGrid'); grid.innerHTML = ''; const year = currentPrefDate.getFullYear(); const month = currentPrefDate.getMonth(); document.getElementById('prefMonthLabel').textContent = new Date(year, month).toLocaleDateString('tr-TR', { month: 'short', year: 'numeric' }); const firstDay = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate(); let startOffset = firstDay === 0 ? 6 : firstDay - 1; for(let i=0; i<startOffset; i++) grid.innerHTML += `<div></div>`; for(let d=1; d<=daysInMonth; d++) { const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; const div = document.createElement('div'); div.className = "pref-day-cell"; const header = document.createElement('div'); header.className = "pref-day-header"; header.textContent = d; div.appendChild(header); for(let s=1; s<=settings.mode; s++) { const shiftDiv = document.createElement('div'); shiftDiv.className = "pref-shift"; const pref = (editingDoc.prefs[ds] && editingDoc.prefs[ds][s]) || 0; if(pref === 1) { shiftDiv.classList.add('wanted'); shiftDiv.textContent = "✓"; } if(pref === 2) { shiftDiv.classList.add('blocked'); shiftDiv.textContent = "✕"; } shiftDiv.onclick = () => { let next = (pref + 1) % 3; if(!editingDoc.prefs[ds]) editingDoc.prefs[ds] = {}; if(next === 0) delete editingDoc.prefs[ds][s]; else editingDoc.prefs[ds][s] = next; renderPrefCalendar(); }; div.appendChild(shiftDiv); } grid.appendChild(div); } }
 
-        function saveDoctor() { const name = document.getElementById('docNameInput').value.trim(); if(!name) { alert('İsim giriniz.'); return; } const formattedName = name; if(editingDoc.id) { const idx = doctors.findIndex(d => d.id === editingDoc.id); doctors[idx] = { ...editingDoc, name: formattedName }; } else { doctors.push({ id: Date.now(), name: formattedName, prefs: editingDoc.prefs }); } localStorage.setItem('mediDoctors', JSON.stringify(doctors)); document.getElementById('docNameInput').value = ""; editingDoc = { id: null, name: "", prefs: {} }; renderPrefCalendar(); renderDoctorsList(); alert('Kaydedildi!'); }
+        function openPrefModal(ds) { document.getElementById('prefModalTitle').textContent = `Tercihler: ${ds}`; const content = document.getElementById('prefModalContent'); content.innerHTML = ''; const labels = shiftLabels[settings.mode]; for(let s=1; s<=settings.mode; s++) { const currentPref = (editingDoc.prefs[ds] && editingDoc.prefs[ds][s]) || 0; const row = document.createElement('div'); row.className = "flex items-center justify-between bg-white p-2 rounded border"; row.innerHTML = `<span class="text-xs font-bold text-slate-600">${labels[s-1]}</span><div class="flex gap-1"><button onclick="setPref('${ds}', ${s}, 0)" class="w-6 h-6 rounded ${currentPref===0?'bg-slate-200 border-slate-400 border':''} text-xs">⚪</button><button onclick="setPref('${ds}', ${s}, 1)" class="w-6 h-6 rounded ${currentPref===1?'bg-green-100 border-green-500 border':''} text-xs">🟢</button><button onclick="setPref('${ds}', ${s}, 2)" class="w-6 h-6 rounded ${currentPref===2?'bg-red-100 border-red-500 border':''} text-xs">🔴</button></div>`; content.appendChild(row); } document.getElementById('prefModal').classList.remove('opacity-0', 'pointer-events-none'); document.body.classList.add('modal-active'); }
 
-        function editDoctor(id) { const doc = doctors.find(d => d.id === id); if(doc) { editingDoc = JSON.parse(JSON.stringify(doc)); document.getElementById('docNameInput').value = doc.name; renderPrefCalendar(); document.querySelector('main').scrollTop = 0; } }
+        window.setPref = function(ds, s, val) { if(!editingDoc.prefs[ds]) editingDoc.prefs[ds] = {}; if(val === 0) delete editingDoc.prefs[ds][s]; else editingDoc.prefs[ds][s] = val; openPrefModal(ds); renderPrefCalendar(); }
 
-        function deleteDoctor(id) { if(confirm('Silinecek?')) { doctors = doctors.filter(d => d.id !== id); localStorage.setItem('mediDoctors', JSON.stringify(doctors)); renderDoctorsList(); } }
+        let selDate = ""; let selShift = 1;
 
-        function showDoctorStats(docName) { /* ... İstatistik Kodu ... */ document.getElementById('statsDocTitle').textContent = `${docName}`; let stats = { total: 0, weekdays: 0, friday: 0, saturday: 0, sunday: 0, slots: {} }; settings.slots.forEach(s => stats.slots[s.name] = 0); Object.keys(assignments).forEach(dateStr => { let workedToday = false; settings.slots.forEach(s => { if(assignments[dateStr][`slot${s.id}`]?.includes(docName)) { stats.slots[s.name]++; workedToday = true; } }); if(workedToday) { stats.total++; const d = new Date(dateStr); const day = d.getDay(); if(day === 5) stats.friday++; else if(day === 6) stats.saturday++; else if(day === 0) stats.sunday++; else stats.weekdays++; } }); let html = `<div class="text-center mb-4"><div class="text-3xl font-bold text-red-600">${stats.total}</div><div class="text-xs">Toplam</div></div>`; document.getElementById('statsContent').innerHTML = html; document.getElementById('statsModal').classList.remove('opacity-0', 'pointer-events-none'); document.body.classList.add('modal-active'); }
+        function openDayModal(ds) { selDate = ds; selShift = 1; const dObj = new Date(ds); document.getElementById('modalDateTitle').textContent = dObj.toLocaleDateString('tr-TR', { day:'numeric', month:'long', weekday:'long'}); document.getElementById('holidayToggle').checked = isDayHoliday(ds); document.getElementById('holidayToggle').onchange = () => toggleHoliday(ds); const tabs = document.getElementById('modalShiftTabs'); if(settings.mode > 1) { tabs.classList.remove('hidden'); tabs.innerHTML = ''; shiftLabels[settings.mode].forEach((lbl, i) => { const s = i+1; const btn = document.createElement('button'); btn.className = `flex-1 py-2 text-xs font-bold border-b-2 transition ${s===1 ? 'text-blue-600 border-blue-600 bg-blue-50' : 'text-slate-500 border-transparent'}`; btn.textContent = lbl; btn.onclick = () => { selShift = s; Array.from(tabs.children).forEach(b=>b.className='flex-1 py-2 text-xs font-bold border-b-2 border-transparent text-slate-500'); btn.className='flex-1 py-2 text-xs font-bold text-blue-600 border-b-2 border-blue-600 bg-blue-50'; renderModalSlots(); }; tabs.appendChild(btn); }); } else { tabs.classList.add('hidden'); } document.getElementById('dayModal').classList.remove('opacity-0', 'pointer-events-none'); document.body.classList.add('modal-active'); renderModalSlots(); }
 
-        function renderDoctorsList() { const list = document.getElementById('doctorsList'); list.innerHTML = ''; doctors.forEach(doc => { const li = document.createElement('li'); li.className = "flex justify-between items-center bg-white p-3 rounded-xl shadow-sm border border-slate-100"; li.innerHTML = `<div class="flex items-center gap-3 cursor-pointer flex-1" onclick="showDoctorStats('${doc.name}')"><span class="font-bold text-sm">${doc.name}</span></div><div class="flex gap-2"><button onclick="editDoctor(${doc.id})" class="text-blue-500"><i class="fa-solid fa-pen"></i></button><button onclick="deleteDoctor(${doc.id})" class="text-red-500"><i class="fa-solid fa-trash"></i></button></div>`; list.appendChild(li); }); }
+        function closeModal(id) { document.getElementById(id).classList.add('opacity-0', 'pointer-events-none'); document.body.classList.remove('modal-active'); if(id === 'dayModal') renderCalendar(); }
 
-        function renderSettings() { const list = document.getElementById('slotsConfigList'); list.innerHTML = ''; settings.slots.forEach((slot, index) => { const div = document.createElement('div'); div.className = "flex gap-2 items-center text-sm p-2 bg-slate-50 rounded border"; div.innerHTML = `<input type="text" value="${slot.name}" onchange="updateSlot(${index}, 'name', this.value)" class="flex-1 bg-white border rounded p-1"><input type="number" value="${slot.min}" onchange="updateSlot(${index}, 'min', this.value)" class="w-10 text-center"><input type="number" value="${slot.max}" onchange="updateSlot(${index}, 'max', this.value)" class="w-10 text-center"><button onclick="deleteSlot(${index})" class="text-red-500"><i class="fa-solid fa-trash"></i></button>`; list.appendChild(div); }); }
+        function renderModalSlots() { const container = document.getElementById('modalSlotsArea'); container.innerHTML = ''; if(!assignments[selDate]) assignments[selDate] = {}; if(!assignments[selDate][`shift${selShift}`]) assignments[selDate][`shift${selShift}`] = {}; const d = new Date(selDate); d.setDate(d.getDate() - 1); const prevDateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; let resting = []; if(assignments[prevDateStr]) { Object.values(assignments[prevDateStr]).forEach(sm=>Object.values(sm).forEach(l=>resting.push(...l))); } resting = [...new Set(resting)]; let busy = []; for(let s=1; s<=settings.mode; s++) { if(s !== selShift && assignments[selDate][`shift${s}`]) Object.values(assignments[selDate][`shift${s}`]).forEach(l=>busy.push(...l)); } const rBox = document.getElementById('restWarningBox'); if(resting.length>0) { rBox.classList.remove('hidden'); document.getElementById('restingCount').textContent=resting.length; } else rBox.classList.add('hidden'); let monthCounts={}; let holidayCounts={}; let totalCounts={}; doctors.forEach(d => { const cm=calculateStats(d.name,false); const ct=calculateStats(d.name,true); monthCounts[d.name]=cm.total; holidayCounts[d.name]=cm.weekend; totalCounts[d.name]=ct.total; }); let isHol = isDayHoliday(selDate); let sorted = [...doctors].sort((a,b) => { const pa = (a.prefs[selDate]&&a.prefs[selDate][selShift])||0; const pb = (b.prefs[selDate]&&b.prefs[selDate][selShift])||0; const gw = (p) => p===1?0:(p===0?1:2); if (pa !== pb) return gw(pa) - gw(pb); if (isHol && holidayCounts[a.name] !== holidayCounts[b.name]) return holidayCounts[a.name] - holidayCounts[b.name]; if (monthCounts[a.name] !== monthCounts[b.name]) return monthCounts[a.name] - monthCounts[b.name]; return totalCounts[a.name] - totalCounts[b.name]; }); settings.slots.forEach(slot => { const current = assignments[selDate][`shift${selShift}`][`slot${slot.id}`] || []; const limit = getSlotLimit(slot, selDate); const div = document.createElement('div'); div.className = "bg-white border border-slate-200 rounded-xl p-3 shadow-sm"; let countCls = "text-slate-500"; if(current.length<limit.min) countCls="text-red-600 font-bold"; else if(current.length>limit.max) countCls="text-orange-500 font-bold"; else if(current.length>0) countCls="text-green-600 font-bold"; div.innerHTML = `<div class="flex justify-between mb-2"><span class="font-bold text-sm text-slate-800">${slot.name}</span><span class="text-xs ${countCls} bg-slate-100 px-2 py-0.5 rounded-full">${current.length} / ${limit.min}-${limit.max}</span></div>`; const btnArea = document.createElement('div'); btnArea.className = "flex flex-wrap gap-2"; sorted.forEach(doc => { const isHere = current.includes(doc.name); const isRest = resting.includes(doc.name); const isBusyToday = busy.includes(doc.name); if((isRest || isBusyToday) && !isHere) return; const pref = (doc.prefs[selDate] && doc.prefs[selDate][selShift]) || 0; let cls = "px-3 py-1.5 rounded-lg text-xs border transition flex items-center gap-1 font-medium "; let icon = ""; let sub = ""; if(isHere) { cls += "bg-blue-600 text-white border-blue-600 shadow-md"; icon = `<i class="fa-solid fa-check"></i>`; if(isRest) { cls = "px-3 py-1.5 rounded-lg text-xs border bg-amber-500 text-white border-amber-600"; sub="(Yorgun)"; } if(isBusyToday) sub="(Çift)"; } else { cls += "bg-slate-50 text-slate-600 border-slate-200 hover:bg-white"; } if(!isHere) { if(pref===1) icon=`<i class="fa-solid fa-star text-yellow-400"></i>`; if(pref===2) icon=`<i class="fa-solid fa-ban text-red-400"></i>`; } const b = document.createElement('button'); b.className = cls; b.innerHTML = `${icon} ${doc.name} <span class='text-[9px] opacity-70 ml-1'>${sub}</span>`; b.onclick = () => { let c = assignments[selDate][`shift${selShift}`][`slot${slot.id}`] || []; if(c.includes(doc.name)) c = c.filter(n=>n!==doc.name); else { settings.slots.forEach(s => { if(assignments[selDate][`shift${selShift}`][`slot${s.id}`]?.includes(doc.name)) assignments[selDate][`shift${selShift}`][`slot${s.id}`] = assignments[selDate][`shift${selShift}`][`slot${s.id}`].filter(n=>n!==doc.name); }); c.push(doc.name); } assignments[selDate][`shift${selShift}`][`slot${slot.id}`] = c; localStorage.setItem('mediAssignments', JSON.stringify(assignments)); renderModalSlots(); }; btnArea.appendChild(b); }); div.appendChild(btnArea); container.appendChild(div); }); }
 
-        function updateSlot(i, f, v) { if(f !== 'name') v = parseInt(v); settings.slots[i][f] = v; }
+        function autoDistribute() { let gapStr = prompt("Vardiyalar/Nöbetler arası minimum dinlenme süresi kaç saat olmalı?", "24"); if (gapStr === null) return; let gapHours = parseInt(gapStr); if (isNaN(gapHours) || gapHours < 0) { alert("Geçersiz saat!"); return; } const hoursPerShift = 24 / settings.mode; const shiftsToSkip = Math.ceil(gapHours / hoursPerShift); const year=currentDate.getFullYear(); const month=currentDate.getMonth(); const days=new Date(year,month+1,0).getDate(); let monthTotalCounts = {}; let monthHolidayCounts = {}; let cumTotalCounts = {}; doctors.forEach(d => { monthTotalCounts[d.name] = calculateStats(d.name, false).total; monthHolidayCounts[d.name] = calculateStats(d.name, false).weekend; cumTotalCounts[d.name] = calculateStats(d.name, true).total; }); function checkResting(docName, currentD, currentS) { let d = currentD; let s = currentS; for(let i=0; i<shiftsToSkip; i++) { s--; if(s < 1) { s = settings.mode; d--; } if(d < 1) break; const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; if(assignments[dateStr] && assignments[dateStr][`shift${s}`]) { let found = false; Object.values(assignments[dateStr][`shift${s}`]).forEach(list => { if(list.includes(docName)) found = true; }); if(found) return true; } } return false; } for(let d=1; d<=days; d++) { const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; const isHol = isDayHoliday(ds); if(!assignments[ds]) assignments[ds]={}; for(let s=1; s<=settings.mode; s++) { let sk = `shift${s}`; if(!assignments[ds][sk]) assignments[ds][sk]={}; settings.slots.forEach(slot => { let asg = assignments[ds][sk][`slot${slot.id}`] || []; const lim = getSlotLimit(slot, ds); if(asg.length < lim.min) { const need = lim.min - asg.length; let cands = doctors.filter(doc => { let busySameShift = false; if(assignments[ds][sk]) { Object.values(assignments[ds][sk]).forEach(l => { if(l.includes(doc.name)) busySameShift=true; }); } if(busySameShift) return false; if(checkResting(doc.name, d, s)) return false; const pref = (doc.prefs[ds] && doc.prefs[ds][s]) || 0; if(pref === 2) return false; return true; }); cands.sort((a,b) => { const pA = (a.prefs[ds]&&a.prefs[ds][s])||0; const pB = (b.prefs[ds]&&b.prefs[ds][s])||0; if(pA===1 && pB!==1) return -1; if(pB===1 && pA!==1) return 1; if(isHol) { if (monthHolidayCounts[a.name] !== monthHolidayCounts[b.name]) return monthHolidayCounts[a.name] - monthHolidayCounts[b.name]; } if (monthTotalCounts[a.name] !== monthTotalCounts[b.name]) return monthTotalCounts[a.name] - monthTotalCounts[b.name]; return cumTotalCounts[a.name] - cumTotalCounts[b.name]; }); for(let i=0; i<need; i++) { if(cands[i]) { const n = cands[i].name; asg.push(n); monthTotalCounts[n]++; cumTotalCounts[n]++; if(isHol) monthHolidayCounts[n]++; } } assignments[ds][sk][`slot${slot.id}`] = asg; } }); } } localStorage.setItem('mediAssignments', JSON.stringify(assignments)); renderCalendar(); alert("Dağıtım tamamlandı."); }
 
-        function addNewSlot() { const newId = settings.slots.length > 0 ? Math.max(...settings.slots.map(s => s.id)) + 1 : 1; settings.slots.push({ id: newId, name: "Yeni Saha", min: 1, max: 2 }); renderSettings(); }
+        function setStatMode(mode) { statMode = mode; document.getElementById('btnStatMonthly').className = `stat-toggle-btn ${mode==='monthly' ? 'stat-toggle-active' : 'stat-toggle-inactive'}`; document.getElementById('btnStatCumulative').className = `stat-toggle-btn ${mode==='cumulative' ? 'stat-toggle-active' : 'stat-toggle-inactive'}`; document.getElementById('statInfoText').textContent = mode === 'monthly' ? `(${new Date(currentDate).toLocaleDateString('tr-TR', { month: 'long' })})` : `(Tüm Zamanlar)`; renderStats(); }
+
+        function renderStats() { if (totalChart) { totalChart.destroy(); totalChart = null; } if (weekendChart) { weekendChart.destroy(); weekendChart = null; } Object.keys(slotCharts).forEach(key => { if(slotCharts[key]) slotCharts[key].destroy(); }); slotCharts = {}; const ctx1 = document.getElementById('totalChart'); const ctx2 = document.getElementById('weekendChart'); const slotContainer = document.getElementById('slotChartsContainer'); if(!ctx1 || !ctx2 || !slotContainer) return; slotContainer.innerHTML = ''; let labels = []; let totalData = []; let weekendData = []; const isCumulative = statMode === 'cumulative'; const sortedDocs = [...doctors].sort((a, b) => a.name.localeCompare(b.name, 'tr')); sortedDocs.forEach(doc => { const s = calculateStats(doc.name, isCumulative); labels.push(doc.name); totalData.push(s.total); weekendData.push(s.weekend); }); totalChart = new Chart(ctx1.getContext('2d'), { type: 'bar', data: { labels: labels, datasets: [{ label: 'Toplam', data: totalData, backgroundColor: '#3b82f6', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } }); weekendChart = new Chart(ctx2.getContext('2d'), { type: 'bar', data: { labels: labels, datasets: [{ label: 'Tatil/Haftasonu', data: weekendData, backgroundColor: '#ef4444', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } }); settings.slots.forEach(slot => { const card = document.createElement('div'); card.className = 'glass-card p-4 rounded-2xl shadow-sm'; card.innerHTML = `<h4 class="text-xs font-bold text-slate-500 uppercase mb-3">${slot.name}</h4><div style="height: 200px;"><canvas id="chart-slot-${slot.id}"></canvas></div>`; slotContainer.appendChild(card); let slotData = []; sortedDocs.forEach(doc => { let count = calculateSlotStats(doc.name, slot.id, isCumulative); slotData.push(count); }); slotCharts[`slot${slot.id}`] = new Chart(document.getElementById(`chart-slot-${slot.id}`).getContext('2d'), { type: 'bar', data: { labels: labels, datasets: [{ label: slot.name, data: slotData, backgroundColor: '#8b5cf6', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } }); }); }
+
+        function renderSettings() { document.getElementById('slotsConfigList').innerHTML = settings.slots.map((s,i) => `<div class="bg-slate-50 p-2 rounded mb-2 border"><div class="flex justify-between mb-1"><input value="${s.name}" onchange="updateSlot(${i},'name',this.value)" class="bg-white border rounded p-1 text-sm font-bold w-1/2"><button onclick="deleteSlot(${i})" class="text-red-400 hover:text-red-600"><i class="fa-solid fa-trash"></i></button></div><div class="flex gap-2 text-xs"><div class="flex-1">Normal: <input type="number" value="${s.min_wd}" onchange="updateSlot(${i},'min_wd',this.value)" class="w-8 border text-center">-<input type="number" value="${s.max_wd}" onchange="updateSlot(${i},'max_wd',this.value)" class="w-8 border text-center"></div><div class="flex-1 text-red-500">Tatil: <input type="number" value="${s.min_we}" onchange="updateSlot(${i},'min_we',this.value)" class="w-8 border text-center">-<input type="number" value="${s.max_we}" onchange="updateSlot(${i},'max_we',this.value)" class="w-8 border text-center"></div></div></div>`).join(''); }
+
+        function updateSlot(i,f,v) { if(f!=='name') v=parseInt(v); settings.slots[i][f]=v; }
+
+        function addNewSlot() { const newId = settings.slots.length > 0 ? Math.max(...settings.slots.map(s => s.id)) + 1 : 1; settings.slots.push({ id: newId, name: "Yeni Saha", min_wd: 1, max_wd: 2, min_we: 1, max_we: 2 }); renderSettings(); }
 
         function deleteSlot(i) { if(confirm("Silinecek?")) { settings.slots.splice(i, 1); renderSettings(); } }
 
         function saveSettings() { localStorage.setItem('mediSettings', JSON.stringify(settings)); alert('Ayarlar kaydedildi.'); renderCalendar(); }
 
-        function clearAllSystem() { if(confirm('Sıfırlanacak?')) { localStorage.removeItem('mediAssignments'); localStorage.removeItem('mediDoctors'); location.reload(); } }
+        function clearAllSystem() { if(confirm('TÜM VERİLER SİLİNECEK!')) { localStorage.removeItem('mediAssignments'); localStorage.removeItem('mediDoctors'); localStorage.removeItem('mediHolidays'); location.reload(); } }
 
-        // --- PAYLAŞILABİLİR RAPORLAMA ---
+        function backupData() { const data = { settings, doctors, assignments, holidays: officialHolidays }; const blob = new Blob([JSON.stringify(data)], {type: "application/json"}); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `ShiftZen_Yedek_${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(link); link.click(); document.body.removeChild(link); }
 
-        // 1. ÖZET (CSV)
+        function restoreData(input) { const file = input.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = function(e) { try { const data = JSON.parse(e.target.result); if(data.settings && data.doctors) { if(confirm("Veriler yüklenecek?")) { localStorage.setItem('mediSettings', JSON.stringify(data.settings)); localStorage.setItem('mediDoctors', JSON.stringify(data.doctors)); localStorage.setItem('mediAssignments', JSON.stringify(data.assignments || {})); localStorage.setItem('mediHolidays', JSON.stringify(data.holidays || [])); location.reload(); } } else { alert("Hatalı dosya!"); } } catch(err) { alert("Dosya okunamadı."); } }; reader.readAsText(file); }
 
-        async function downloadReport() {
-
-            let csvContent = "\uFEFFİSİM;";
-
-            settings.slots.forEach(s => csvContent += s.name.toUpperCase() + ";");
-
-            csvContent += "TOPLAM;HAFTAİÇİ;CUMA;CUMARTESİ;PAZAR\n";
-
-            const sortedDocs = [...doctors].sort((a, b) => a.name.localeCompare(b.name, 'tr'));
-
-            sortedDocs.forEach(doc => {
-
-                let stats = { total: 0, weekday: 0, friday: 0, saturday: 0, sunday: 0 };
-
-                let slotCounts = {}; 
-
-                settings.slots.forEach(s => slotCounts[`slot${s.id}`] = 0);
-
-                Object.keys(assignments).forEach(dateStr => {
-
-                    const d = new Date(dateStr);
-
-                    const day = d.getDay(); 
-
-                    let worked = false;
-
-                    settings.slots.forEach(s => {
-
-                        if(assignments[dateStr][`slot${s.id}`]?.includes(doc.name)) {
-
-                            slotCounts[`slot${s.id}`]++;
-
-                            worked = true;
-
-                        }
-
-                    });
-
-                    if(worked) {
-
-                        stats.total++;
-
-                        if(day === 5) stats.friday++; else if(day === 6) stats.saturday++; else if(day === 0) stats.sunday++; else stats.weekday++;
-
-                    }
-
-                });
-
-                let row = `"${doc.name}";`;
-
-                settings.slots.forEach(s => row += slotCounts[`slot${s.id}`] + ";");
-
-                row += `${stats.total};${stats.weekday};${stats.friday};${stats.saturday};${stats.sunday}\n`;
-
-                csvContent += row;
-
-            });
-
-            await shareFile(csvContent, "MediNobet_Ozet.csv", "text/csv");
-
-        }
-
-        // 2. ÇİZELGE (CSV)
-
-        async function downloadScheduleReport() {
-
-            let csvContent = "\uFEFFTARİH;GÜN;";
-
-            settings.slots.forEach(s => csvContent += s.name.toUpperCase() + ";");
-
-            csvContent += "\n";
-
-            const year = currentDate.getFullYear();
-
-            const month = currentDate.getMonth();
-
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-            for(let d=1; d<=daysInMonth; d++) {
-
-                const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-
-                const dateObj = new Date(year, month, d);
-
-                const dayName = dateObj.toLocaleDateString('tr-TR', { weekday: 'long' });
-
-                const formattedDate = `${String(d).padStart(2,'0')}.${String(month+1).padStart(2,'0')}.${year}`;
-
-                let row = `${formattedDate};${dayName};`;
-
-                settings.slots.forEach(s => {
-
-                    const assigned = assignments[dateStr]?.[`slot${s.id}`] || [];
-
-                    row += `"${assigned.join(' + ')}";`;
-
-                });
-
-                csvContent += row + "\n";
-
-            }
-
-            await shareFile(csvContent, "MediNobet_Cizelge.csv", "text/csv");
-
-        }
-
-        // 3. TAM RAPOR (XLSX)
-
-        async function downloadFullReport() {
-
-            const wb = XLSX.utils.book_new();
-
-            // Sayfa 1: Özet
-
-            let summaryData = [];
-
-            let summaryHeaders = ["İSİM"];
-
-            settings.slots.forEach(s => summaryHeaders.push(s.name.toUpperCase()));
-
-            summaryHeaders.push("TOPLAM", "HAFTAİÇİ", "CUMA", "CUMARTESİ", "PAZAR");
-
-            summaryData.push(summaryHeaders);
-
-            const sortedDocs = [...doctors].sort((a, b) => a.name.localeCompare(b.name, 'tr'));
-
-            sortedDocs.forEach(doc => {
-
-                let stats = { total: 0, weekday: 0, friday: 0, saturday: 0, sunday: 0 };
-
-                let slotCounts = {}; 
-
-                settings.slots.forEach(s => slotCounts[`slot${s.id}`] = 0);
-
-                Object.keys(assignments).forEach(dateStr => {
-
-                    const d = new Date(dateStr);
-
-                    const day = d.getDay(); 
-
-                    let worked = false;
-
-                    settings.slots.forEach(s => {
-
-                        if(assignments[dateStr][`slot${s.id}`]?.includes(doc.name)) {
-
-                            slotCounts[`slot${s.id}`]++;
-
-                            worked = true;
-
-                        }
-
-                    });
-
-                    if(worked) {
-
-                        stats.total++;
-
-                        if(day === 5) stats.friday++; else if(day === 6) stats.saturday++; else if(day === 0) stats.sunday++; else stats.weekday++;
-
-                    }
-
-                });
-
-                let row = [doc.name];
-
-                settings.slots.forEach(s => row.push(slotCounts[`slot${s.id}`]));
-
-                row.push(stats.total, stats.weekday, stats.friday, stats.saturday, stats.sunday);
-
-                summaryData.push(row);
-
-            });
-
-            // Sayfa 2: Çizelge
-
-            let scheduleData = [];
-
-            let scheduleHeaders = ["TARİH", "GÜN"];
-
-            settings.slots.forEach(s => scheduleHeaders.push(s.name.toUpperCase()));
-
-            scheduleData.push(scheduleHeaders);
-
-            const year = currentDate.getFullYear();
-
-            const month = currentDate.getMonth();
-
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-            for(let d=1; d<=daysInMonth; d++) {
-
-                const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-
-                const dateObj = new Date(year, month, d);
-
-                const dayName = dateObj.toLocaleDateString('tr-TR', { weekday: 'long' });
-
-                const formattedDate = `${String(d).padStart(2,'0')}.${String(month+1).padStart(2,'0')}.${year}`;
-
-                let row = [formattedDate, dayName];
-
-                settings.slots.forEach(s => {
-
-                    const assigned = assignments[dateStr]?.[`slot${s.id}`] || [];
-
-                    row.push(assigned.join(' + '));
-
-                });
-
-                scheduleData.push(row);
-
-            }
-
-            const ws1 = XLSX.utils.aoa_to_sheet(summaryData);
-
-            const ws2 = XLSX.utils.aoa_to_sheet(scheduleData);
-
-            XLSX.utils.book_append_sheet(wb, ws1, "Özet Rapor");
-
-            XLSX.utils.book_append_sheet(wb, ws2, "Nöbet Çizelgesi");
-
-            // Binary veri oluştur
-
-            const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-
-            await shareFile(wbout, "MediNobet_Tam_Rapor.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-
-        }
-
-        // PAYLAŞIM VE KAYDETME FONKSİYONU
-
-        async function shareFile(content, filename, mimeType) {
-
-            let file;
-
-            if (content instanceof Uint8Array) {
-
-                file = new File([content], filename, { type: mimeType });
-
-            } else {
-
-                file = new File([content], filename, { type: mimeType });
-
-            }
-
-            // iOS ve Android için Native Paylaşım
-
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-
-                try {
-
-                    await navigator.share({
-
-                        files: [file],
-
-                        title: 'MediNöbet Raporu',
-
-                        text: 'Nöbet raporu ektedir.'
-
-                    });
-
-                } catch (err) {
-
-                    console.log("Paylaşım iptal edildi veya hata: ", err);
-
-                }
-
-            } else {
-
-                // Eski usül indirme (Masaüstü için)
-
-                const url = URL.createObjectURL(file);
-
-                const link = document.createElement("a");
-
-                link.href = url;
-
-                link.download = filename;
-
-                document.body.appendChild(link);
-
-                link.click();
-
-                document.body.removeChild(link);
-
-            }
-
-        }
+        async function downloadFullReport() { const wb = XLSX.utils.book_new(); let summaryMonth = [["İSİM", "TOPLAM", "HAFTAİÇİ", "TATİL"]]; const sortedDocs = [...doctors].sort((a, b) => a.name.localeCompare(b.name, 'tr')); sortedDocs.forEach(doc => { const s = calculateStats(doc.name, false); summaryMonth.push([doc.name, s.total, s.total - s.weekend, s.weekend]); }); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summaryMonth), "Bu Ayın Özeti"); let summaryCum = [["İSİM", "GENEL TOPLAM", "GENEL HAFTAİÇİ", "GENEL TATİL"]]; sortedDocs.forEach(doc => { const s = calculateStats(doc.name, true); summaryCum.push([doc.name, s.total, s.total - s.weekend, s.weekend]); }); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summaryCum), "Kümülatif Özet"); let sched = [["TARİH", "GÜN", "VARDİYA", ...settings.slots.map(s=>s.name)]]; const year=currentDate.getFullYear(); const month=currentDate.getMonth(); const days=new Date(year,month+1,0).getDate(); for(let d=1; d<=days; d++) { const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; const dn = new Date(year, month, d).toLocaleDateString('tr-TR', { weekday: 'long' }); const isH = officialHolidays.includes(ds); let dispD = `${d}.${month+1}.${year}` + (isH?" (T)":""); for(let s=1; s<=settings.mode; s++) { let r = [dispD, dn, `${s}. V`]; settings.slots.forEach(slot => { let a = []; if(assignments[ds] && assignments[ds][`shift${s}`]) a = assignments[ds][`shift${s}`][`slot${slot.id}`] || []; r.push(a.join('+')); }); sched.push(r); } } XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(sched), "Çizelge"); settings.slots.forEach(slot => { let slotData = [["İSİM", "BU AY", "KÜMÜLATİF"]]; doctors.forEach(doc => { slotData.push([doc.name, calculateSlotStats(doc.name, slot.id, false), calculateSlotStats(doc.name, slot.id, true)]); }); let safeName = `Dağılım - ${slot.name}`.substring(0, 30); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(slotData), safeName); }); let holidayData = [["İSİM", "BU AY TATİL", "KÜMÜLATİF TATİL"]]; doctors.forEach(doc => { holidayData.push([doc.name, calculateStats(doc.name, false).weekend, calculateStats(doc.name, true).weekend]); }); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(holidayData), "Analiz - Genel & Tatil"); XLSX.writeFile(wb, `ShiftZen_Rapor_${new Date(currentDate).toLocaleDateString('tr-TR', {month:'long', year:'numeric'})}.xlsx`); }
 
         if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(console.error); }
 </script>
